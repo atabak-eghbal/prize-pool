@@ -5,7 +5,7 @@ export interface PayoutItem {
   teamId: string;
   places: number[];
   playerName: string;
-  accountId: number;
+  gameId: string;
   paypalEmail: string;
   cents: number;
 }
@@ -52,7 +52,7 @@ export function planPayout(poolCents: number, spec: TournamentSpec, groups: Plac
     if (!team) throw new Error(`unknown team ${tw.teamId}`);
     const each = splitCents(teamCents[i], team.players.map(() => 1));
     team.players.forEach((p, j) =>
-      items.push({ teamId: team.id, places: tw.places, playerName: p.name, accountId: p.accountId, paypalEmail: p.paypalEmail, cents: each[j] }),
+      items.push({ teamId: team.id, places: tw.places, playerName: p.name, gameId: p.gameId, paypalEmail: p.paypalEmail, cents: each[j] }),
     );
   });
   return { poolCents, feeCents, distributableCents, items: items.filter((x) => x.cents > 0) };

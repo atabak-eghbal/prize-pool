@@ -1,9 +1,11 @@
 import type { TournamentSpec, Team } from "./spec.js";
-import type { Verdict } from "./verify.js";
+import type { Verdict } from "./results.js";
 
 export interface Game {
-  matchId: number;
-  winnerTeamId: string;
+  /** Result ref, e.g. "dota:9076476183" or "lichess:MgCqgD99". */
+  ref: string;
+  /** null for a draw (chess): the game counts as played, the series continues. */
+  winnerTeamId: string | null;
 }
 export interface Series {
   id: string; // e.g. "r1m2"
@@ -71,13 +73,13 @@ export function getSeries(b: Bracket, id: string): Series {
 export function recordGame(b: Bracket, seriesId: string, v: Verdict): Bracket {
   const next: Bracket = structuredClone(b);
   const s = getSeries(next, seriesId);
-  if (!v.ok || !v.winnerTeamId) throw new Error("only verified results can be recorded");
+  if (!v.ok) throw new Error("only verified results can be recorded");
+  if (!v.winnerTeamId && !v.facts.draw) throw new Error("a verified result needs a winner or a draw");
   if (s.winner) throw new Error(`series ${seriesId} is already decided`);
   if (!s.teamA || !s.teamB) throw new Error(`series ${seriesId} has no opponents yet`);
-  if (![s.teamA, s.teamB].includes(v.winnerTeamId)) throw new Error("winner is not in this series");
-  if (next.series.some((x) => x.games.some((g) => g.matchId === v.facts.matchId)))
-    throw new Error(`match ${v.facts.matchId} already recorded`);
-  s.games.push({ matchId: v.facts.matchId, winnerTeamId: v.winnerTeamId });
+  if (v.winnerTeamId && ![s.teamA, s.teamB].includes(v.winnerTeamId)) throw new Error("winner is not in this series");
+  if (next.series.some((x) => x.games.some((g) => g.ref === v.facts.ref))) throw new Error(`result ${v.facts.ref} already recorded`);
+  s.games.push({ ref: v.facts.ref, winnerTeamId: v.winnerTeamId });
   const need = winsNeeded(s.bestOf);
   for (const t of [s.teamA, s.teamB]) {
     if (s.games.filter((g) => g.winnerTeamId === t).length >= need) s.winner = t;

@@ -26,7 +26,8 @@ export const PrizeShare = z.object({
 export const TournamentSpec = z
   .object({
     name: z.string().min(3).max(80),
-    game: z.literal("dota2"),
+    /** dota2: results from OpenDota (league-ticketed lobbies only); chess: results from Lichess. */
+    game: z.enum(["dota2", "chess"]),
     format: z.literal("single_elimination"),
     teamCount: z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)]),
     bestOf: z.object({
@@ -35,7 +36,7 @@ export const TournamentSpec = z
     }),
     /** Matches must start inside this window (ISO 8601, UTC). */
     window: z.object({ start: z.string().datetime(), end: z.string().datetime() }),
-    /** Optional Dota league ticket id; when set, every match must belong to it. */
+    /** Dota league ticket id. Required for dota2: lobbies without a ticket are not in public match data. */
     leagueId: z.number().int().positive().nullable().default(null),
     /** Minimum rostered players per side for a match to count (5 = no stand-ins). */
     minRosterPlayers: z.number().int().min(3).max(5).default(4),
@@ -55,6 +56,8 @@ export const TournamentSpec = z
       ctx.addIssue({ code: "custom", path: ["prizeSplit"], message: `a place exceeds the number of teams (${s.teamCount})` });
     if (Date.parse(s.window.end) <= Date.parse(s.window.start))
       ctx.addIssue({ code: "custom", path: ["window"], message: "window end must be after start" });
+    if (s.game === "dota2" && s.leagueId === null)
+      ctx.addIssue({ code: "custom", path: ["leagueId"], message: "Dota 2 tournaments need a league id: matches outside a league are not publicly verifiable" });
     const ids = s.rules.map((r) => r.id);
     if (new Set(ids).size !== ids.length)
       ctx.addIssue({ code: "custom", path: ["rules"], message: "rule ids must be unique" });
@@ -63,8 +66,8 @@ export type TournamentSpec = z.infer<typeof TournamentSpec>;
 
 export const Player = z.object({
   name: z.string().min(1).max(40),
-  /** 32-bit Steam account id as used by OpenDota. */
-  accountId: z.number().int().positive(),
+  /** Result-source identity: Dota 32-bit Steam account id (digits) or Lichess user id (lowercase). */
+  gameId: z.string().regex(/^([0-9]{1,10}|[a-z0-9_-]{2,30})$/),
   paypalEmail: z.string().email(),
 });
 
@@ -72,6 +75,7 @@ export const Team = z.object({
   id: z.string().regex(/^[a-z0-9-]{2,24}$/),
   name: z.string().min(2).max(40),
   seed: z.number().int().min(1).max(16),
-  players: z.array(Player).min(5).max(7),
+  /** 5-7 players for dota2, exactly 1 for chess (checked at registration against the spec). */
+  players: z.array(Player).min(1).max(7),
 });
 export type Team = z.infer<typeof Team>;

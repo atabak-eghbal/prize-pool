@@ -1,0 +1,26 @@
+{
+ "id": "MgCqgD99",
+ "rated": true,
+ "variant": "standard",
+ "speed": "bullet",
+ "createdAt": 1793836114217,
+ "lastMoveAt": 1793836199294,
+ "status": "resign",
+ "winner": "black",
+ "players": {
+  "white": {
+   "user": {
+    "name": "See-Hear-Feel",
+    "id": "see-hear-feel"
+   }
+  },
+  "black": {
+   "user": {
+    "name": "JAIME_SONHO01",
+    "title": "IM",
+    "flair": "people.mx-claus-dark-skin-tone",
+    "id": "jaime_sonho01"
+   }
+  }
+ }
+}

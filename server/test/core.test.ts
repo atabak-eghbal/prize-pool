@@ -1,23 +1,24 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { TournamentSpec, type Team } from "../src/spec.js";
-import { verifyMatch, type OdMatch, type Expectation } from "../src/verify.js";
+import { verifyDotaMatch as verifyMatch, type OdMatch, type DotaExpectation as Expectation } from "../src/verify.js";
+import { verifyLichessGame, type LichessGame, type LichessExpectation } from "../src/lichess.js";
 import { createBracket, recordGame, placements, seedOrder, isComplete, type Bracket } from "../src/bracket.js";
 import { planPayout, splitCents } from "../src/payouts.js";
 import { checkPayoutBatch } from "../src/gate.js";
 
 const real: OdMatch = JSON.parse(readFileSync(new URL("./fixtures/match_9076476183.json", import.meta.url), "utf8"));
-const radIds = real.players.filter((p) => p.isRadiant).map((p) => p.account_id as number);
-const direIds = real.players.filter((p) => !p.isRadiant).map((p) => p.account_id as number);
+const radIds = real.players.filter((p) => p.isRadiant).map((p) => String(p.account_id));
+const direIds = real.players.filter((p) => !p.isRadiant).map((p) => String(p.account_id));
 
 const baseExp = (over: Partial<Expectation> = {}): Expectation => ({
-  teamA: { teamId: "alpha", accountIds: radIds },
-  teamB: { teamId: "bravo", accountIds: direIds },
+  teamA: { teamId: "alpha", ids: radIds },
+  teamB: { teamId: "bravo", ids: direIds },
   windowStart: new Date((real.start_time - 3600) * 1000).toISOString(),
   windowEnd: new Date((real.start_time + 3600) * 1000).toISOString(),
   leagueId: real.leagueid ?? null,
   minRosterPlayers: 4,
-  usedMatchIds: [],
+  usedRefs: [],
   ...over,
 });
 
@@ -26,10 +27,11 @@ describe("verifyMatch on a real OpenDota match", () => {
     const v = verifyMatch(real, baseExp());
     expect(v.ok).toBe(true);
     expect(v.winnerTeamId).toBe("bravo");
-    expect(v.facts.radiantTeamId).toBe("alpha");
+    expect(v.facts.details.radiantTeamId).toBe("alpha");
+    expect(v.facts.ref).toBe(`dota:${real.match_id}`);
   });
   it("works when the teams are listed the other way round", () => {
-    const v = verifyMatch(real, baseExp({ teamA: { teamId: "bravo", accountIds: direIds }, teamB: { teamId: "alpha", accountIds: radIds } }));
+    const v = verifyMatch(real, baseExp({ teamA: { teamId: "bravo", ids: direIds }, teamB: { teamId: "alpha", ids: radIds } }));
     expect(v.ok).toBe(true);
     expect(v.winnerTeamId).toBe("bravo");
   });
@@ -42,30 +44,30 @@ describe("verifyMatch on a real OpenDota match", () => {
     expect(verifyMatch(real, baseExp({ leagueId: 1 })).ok).toBe(false);
   });
   it("rejects a match whose players aren't the rostered team", () => {
-    const strangers = [1, 2, 3, 4, 5];
-    const v = verifyMatch(real, baseExp({ teamB: { teamId: "bravo", accountIds: strangers } }));
+    const strangers = ["1", "2", "3", "4", "5"];
+    const v = verifyMatch(real, baseExp({ teamB: { teamId: "bravo", ids: strangers } }));
     expect(v.ok).toBe(false);
     expect(v.winnerTeamId).toBeNull();
   });
   it("allows one stand-in at minRosterPlayers=4 but not two", () => {
-    const one = verifyMatch(real, baseExp({ teamB: { teamId: "bravo", accountIds: [...direIds.slice(0, 4), 7] } }));
+    const one = verifyMatch(real, baseExp({ teamB: { teamId: "bravo", ids: [...direIds.slice(0, 4), "7"] } }));
     expect(one.ok).toBe(true);
-    const two = verifyMatch(real, baseExp({ teamB: { teamId: "bravo", accountIds: [...direIds.slice(0, 3), 7, 8] } }));
+    const two = verifyMatch(real, baseExp({ teamB: { teamId: "bravo", ids: [...direIds.slice(0, 3), "7", "8"] } }));
     expect(two.ok).toBe(false);
   });
   it("rejects reusing a match id", () => {
-    expect(verifyMatch(real, baseExp({ usedMatchIds: [real.match_id] })).ok).toBe(false);
+    expect(verifyMatch(real, baseExp({ usedRefs: [`dota:${real.match_id}`] })).ok).toBe(false);
   });
   it("rejects a mixed lobby (rostered players split across sides)", () => {
     const mixedA = [...radIds.slice(0, 3), ...direIds.slice(0, 2)];
     const mixedB = [...direIds.slice(2), ...radIds.slice(3)];
-    expect(verifyMatch(real, baseExp({ teamA: { teamId: "alpha", accountIds: mixedA }, teamB: { teamId: "bravo", accountIds: mixedB } })).ok).toBe(false);
+    expect(verifyMatch(real, baseExp({ teamA: { teamId: "alpha", ids: mixedA }, teamB: { teamId: "bravo", ids: mixedB } })).ok).toBe(false);
   });
 });
 
 const spec = TournamentSpec.parse({
   name: "Friday Night Cup",
-  game: "dota2",
+  game: "chess",
   format: "single_elimination",
   teamCount: 4,
   bestOf: { default: 1, final: 3 },
@@ -83,11 +85,14 @@ const team = (id: string, seed: number, base: number): Team => ({
   id,
   name: id.toUpperCase(),
   seed,
-  players: [0, 1, 2, 3, 4].map((k) => ({ name: `${id}-${k}`, accountId: base + k, paypalEmail: `${id}${k}@example.com` })),
+  players: [0, 1, 2, 3, 4].map((k) => ({ name: `${id}-${k}`, gameId: String(base + k), paypalEmail: `${id}${k}@example.com` })),
 });
 const teams = [team("aa", 1, 100), team("bb", 2, 200), team("cc", 3, 300), team("dd", 4, 400)];
-const win = (b: Bracket, sid: string, winner: string, matchId: number) =>
-  recordGame(b, sid, { ok: true, winnerTeamId: winner, loserTeamId: null, checks: [], facts: { matchId } as never });
+const win = (b: Bracket, sid: string, winner: string | null, n: number) =>
+  recordGame(b, sid, {
+    ok: true, winnerTeamId: winner, loserTeamId: null, checks: [],
+    facts: { source: "lichess", ref: `lichess:g${n}`, startTime: "", durationSec: 0, draw: winner === null, details: {} },
+  });
 
 function finished(): Bracket {
   let b = createBracket(spec, teams);
@@ -162,5 +167,55 @@ describe("policy gate", () => {
     expect(checkPayoutBatch({ ...base, proposed: good, openDisputes: 1 })).toContain("1 dispute(s) still open");
     expect(checkPayoutBatch({ ...base, proposed: good, alreadyPaid: true }).length).toBeGreaterThan(0);
     expect(checkPayoutBatch({ ...base, bracket: createBracket(spec, teams), proposed: good }).length).toBeGreaterThan(0);
+  });
+});
+
+const lg: LichessGame = JSON.parse(readFileSync(new URL("./fixtures/lichess_MgCqgD99.json", import.meta.url), "utf8"));
+const lexp = (over: Partial<LichessExpectation> = {}): LichessExpectation => ({
+  teamA: { teamId: "kings", ids: ["see-hear-feel"] },
+  teamB: { teamId: "rooks", ids: ["jaime_sonho01"] },
+  windowStart: new Date(lg.createdAt - 60_000).toISOString(),
+  windowEnd: new Date(lg.createdAt + 60_000).toISOString(),
+  usedRefs: [],
+  identity: { mode: "accounts" },
+  variant: "standard",
+  ...over,
+});
+
+describe("verifyLichessGame on a real finished game (white resigned)", () => {
+  it("finds black's team as the winner in accounts mode", () => {
+    const v = verifyLichessGame(lg, lexp());
+    expect(v.ok).toBe(true);
+    expect(v.winnerTeamId).toBe("rooks");
+    expect(v.loserTeamId).toBe("kings");
+  });
+  it("rejects unregistered players", () => {
+    expect(verifyLichessGame(lg, lexp({ teamB: { teamId: "rooks", ids: ["someone-else"] } })).ok).toBe(false);
+  });
+  it("issued mode: accepts only the game we issued, mapping colours to teams", () => {
+    const ok = verifyLichessGame(lg, lexp({ identity: { mode: "issued", gameId: lg.id, whiteTeamId: "rooks", blackTeamId: "kings" } }));
+    expect(ok.winnerTeamId).toBe("kings");
+    const wrong = verifyLichessGame(lg, lexp({ identity: { mode: "issued", gameId: "zzzzzzzz", whiteTeamId: "rooks", blackTeamId: "kings" } }));
+    expect(wrong.ok).toBe(false);
+  });
+  it("rejects unfinished, aborted and cheat-terminated games, and reuse", () => {
+    for (const status of ["started", "aborted", "cheat"]) expect(verifyLichessGame({ ...lg, status }, lexp()).ok).toBe(false);
+    expect(verifyLichessGame(lg, lexp({ usedRefs: [`lichess:${lg.id}`] })).ok).toBe(false);
+  });
+  it("treats a draw as verified with no winner", () => {
+    const v = verifyLichessGame({ ...lg, status: "draw", winner: undefined }, lexp());
+    expect(v.ok).toBe(true);
+    expect(v.facts.draw).toBe(true);
+    expect(v.winnerTeamId).toBeNull();
+  });
+});
+
+describe("draws in a series", () => {
+  it("a drawn game is consumed but does not decide a best-of-1", () => {
+    let b = createBracket(spec, teams);
+    b = win(b, "r1m1", null, 50);
+    expect(b.series[0].winner).toBeNull();
+    b = win(b, "r1m1", "aa", 51);
+    expect(b.series[0].winner).toBe("aa");
   });
 });

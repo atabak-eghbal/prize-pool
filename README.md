@@ -17,8 +17,8 @@ take days, and organizers get accused of keeping the money.
 1. The organizer describes the event in plain English; Claude compiles it into a validated tournament spec.
 2. Fans and sponsors fund the pool: contributions are **PayPal authorizations** (held, not charged), and sponsor
    pledges are **PayPal invoices**. If the event is cancelled, every hold is voided automatically.
-3. Every reported result is checked **in code** against the public OpenDota match data: rosters, sides, winner, league
-   and time window.
+3. Every reported result is checked **in code** against public match data: **Dota 2** through OpenDota (rosters, sides,
+   winner, league, time window) or **chess** through Lichess (players or issued game, termination, variant, window).
 4. The bracket advances; disputes are ruled against the organizer's own rulebook, with the match facts shown.
 5. After the final, a **PayPal Payouts** batch pays every winning player. A policy gate recomputes every amount and
    recipient first, so no model can redirect money.
@@ -26,7 +26,8 @@ take days, and organizers get accused of keeping the money.
 Pools are funded by contributions and sponsors only: no entry fees, no betting.
 
 ## Status
-- [x] Result checker, bracket, exact cent splits, payout policy gate (`server/src`, tested with a real match)
+- [x] Result sources for Dota 2 (OpenDota) and chess (Lichess), bracket with draws, exact cent splits, payout policy gate
+      (`server/src`, tested against a real Dota 2 match and a real Lichess game)
 - [ ] PayPal sandbox integration (Orders v2 authorize/capture/void, Payouts, Invoicing, webhooks)
 - [ ] Claude spec compiler and ruling agent
 - [ ] Organizer console and public tournament page with an AG Grid ledger
