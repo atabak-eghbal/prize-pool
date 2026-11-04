@@ -1,0 +1,72 @@
+{
+ "match_id": 9076476183,
+ "start_time": 1793822872,
+ "duration": 3537,
+ "radiant_win": false,
+ "leagueid": 19944,
+ "human_players": 10,
+ "radiant_team_id": 10149530,
+ "dire_team_id": 9964962,
+ "players": [
+  {
+   "account_id": 96183976,
+   "isRadiant": true,
+   "player_slot": 0,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 140251702,
+   "isRadiant": true,
+   "player_slot": 1,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 331711578,
+   "isRadiant": true,
+   "player_slot": 2,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 206097366,
+   "isRadiant": true,
+   "player_slot": 3,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 122817493,
+   "isRadiant": true,
+   "player_slot": 4,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 177203952,
+   "isRadiant": false,
+   "player_slot": 128,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 154974246,
+   "isRadiant": false,
+   "player_slot": 129,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 160119017,
+   "isRadiant": false,
+   "player_slot": 130,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 191362875,
+   "isRadiant": false,
+   "player_slot": 131,
+   "leaver_status": 0
+  },
+  {
+   "account_id": 90423751,
+   "isRadiant": false,
+   "player_slot": 132,
+   "leaver_status": 0
+  }
+ ]
+}

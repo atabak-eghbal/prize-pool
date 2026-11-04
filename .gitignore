@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+data/
+*.log
+.DS_Store
+research/raw/
+research/probes/
+research/codex/*.log
+.worktrees/
