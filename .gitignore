@@ -10,3 +10,8 @@ research/raw/
 research/probes/
 research/codex/*.log
 .worktrees/
+video/.venv/
+video/audio/
+video/shots/
+video/parts/
+video/out/
