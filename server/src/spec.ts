@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Event-level tournament configuration. Claude compiles the organizer's plain-English
+ * Event-level tournament configuration. A model compiles the organizer's plain-English
  * description into this shape; code validates it and feeds errors back to the model.
  * Teams register separately (see Team) because the organizer's text has no account ids.
  */

@@ -14,7 +14,7 @@ Grassroots tournament organizers (Discord communities, small leagues) still coll
 take days, and organizers get accused of keeping the money.
 
 ## What Prize Pool does
-1. The organizer describes the event in plain English; Claude compiles it into a validated tournament spec.
+1. The organizer describes the event in plain English; a model (Gemini) compiles it into a validated tournament spec.
 2. Fans and sponsors fund the pool: contributions are **PayPal authorizations** (held, not charged), and sponsor
    pledges are **PayPal invoices**. If the event is cancelled, every hold is voided automatically.
 3. Every reported result is checked **in code** against public match data: **Dota 2** through OpenDota (rosters, sides,
@@ -28,8 +28,11 @@ Pools are funded by contributions and sponsors only: no entry fees, no betting.
 ## Status
 - [x] Result sources for Dota 2 (OpenDota) and chess (Lichess), bracket with draws, exact cent splits, payout policy gate
       (`server/src`, tested against a real Dota 2 match and a real Lichess game)
-- [ ] PayPal sandbox integration (Orders v2 authorize/capture/void, Payouts, Invoicing, webhooks)
-- [ ] Claude spec compiler and ruling agent
+- [x] PayPal client (`server/src/paypal.ts`): Payouts and order creation run against the sandbox; authorize, capture
+      and void are tested offline until the pledge page exists
+- [ ] PayPal Invoicing and webhook handling
+- [x] Spec compiler and dispute ruling (`server/src/compile.ts`, `server/src/ruling.ts`): replies are checked in code,
+      rulings are proposals only
 - [ ] Organizer console and public tournament page with an AG Grid ledger
 
 ## Develop
@@ -39,7 +42,7 @@ npm install
 npm test
 ```
 
-Copy `.env.example` to `.env` and fill in the PayPal sandbox and Anthropic keys.
+Copy `.env.example` to `.env` and fill in the PayPal sandbox and Gemini keys.
 
 ## License
 MIT. See [LICENSE](LICENSE).
